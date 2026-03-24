@@ -54,7 +54,7 @@ Store the experience level as `USER_EXPERIENCE` and apply to ALL output for the 
 
 **Subsequent workflows:** Do NOT re-ask the full setup questions. Instead, show a one-line reminder before each workflow:
 ```
-Using: [Beginner] mode, [Auto-fix], [Display only]. Type "adjust" to change, or press Enter to continue.
+Using: [Beginner] mode, [Auto-fix small issues], [Display only]. Type "adjust" to change, or press Enter to continue.
 ```
 If the user types "adjust", re-ask only the question(s) they want to change. Users may want to adjust experience level after a few workflows (beginner explanations may feel too simple, expert too terse).
 
@@ -93,6 +93,42 @@ tput cols
 ```
 
 If the user later says "show full table", "wide table", or "full ratings", re-render the most recent findings table in full 8-column format regardless of terminal width. Apply to ALL tables in the session.
+
+---
+
+## Plain Language Communication (MANDATORY)
+
+All user-facing prompts must be understandable by someone who has never used this skill before. Apply these rules to every `AskUserQuestion`, progress banner, and completion message:
+
+1. **Describe what was found** in plain terms ("data lost when exporting and re-importing", "backup doesn't save your insurance settings") — not jargon ("serialization gap in round-trip")
+2. **Describe next steps by what they DO**, not by skill name ("check your data models for missing fields" not "proceed to data-model-radar")
+3. **Describe options by outcome and time cost** ("Fix the data loss bugs now (~20 min)" not "Wave 2: Cross-cutting fixes")
+4. **Add an "Explain more" option** to every transition `AskUserQuestion` so users can get context without slowing down experienced users
+5. **Define jargon on first use:**
+   - "Round-trip" → when data goes through a complete cycle (e.g., create → export → import) and comes back intact
+   - "Workflow" → a complete user task from start to finish (e.g., "add an item", "create a backup")
+   - "Wave" → "fix batch" (a group of related fixes applied together)
+   - "Handoff" → a file this skill writes so other audit skills can pick up where it left off
+   - "Cross-cutting" → an issue that appears in multiple workflows (not just one)
+   - "Blast radius" → how many files a fix touches
+6. **Exception:** If user selected Senior/Expert experience level, terse references are acceptable
+
+### Completion Prompt Template
+
+When all workflows are audited, use this pattern:
+
+```
+I traced [X] user workflows end-to-end and found [Y] issues:
+- [N] data loss risks (data doesn't survive the complete cycle)
+- [N] silent failures (operations appear to succeed but data is wrong/missing)
+- [N] other issues
+
+You can:
+1. **Fix the data loss issues now** (~[time]) — prevents users from losing data
+2. **Fix just the quick wins** (~[time]) — [one-line description]
+3. **Keep auditing other areas first** — I'll check [plain description] next
+4. **Explain more** — I'll walk through what each issue means before you decide
+```
 
 ---
 
@@ -175,9 +211,8 @@ Ask the user these questions **once per session** in a single prompt. For subseq
 - **Senior/Expert** — Deep expertise. Terse, file:line only, skip explanations.
 
 **Question 2: "How should fixes be handled?"**
-- **Auto-fix safe items (Recommended)** — Apply isolated, low-blast-radius fixes
-  automatically. Present cross-cutting fixes and design decisions as a plan for approval.
-- **Plan only** — Do not change any code. Present all findings as a plan for approval.
+- **Fix small, isolated issues automatically (Recommended)** — Apply fixes that are contained (only touching one or two files) without asking. Present larger fixes and design decisions as a plan for approval.
+- **Report issues without changing any code** — Do not change any code. Present all findings as a plan for approval.
 
 **Question 3: "How should results be delivered?"**
 - **Display only (Recommended)** — Show findings in the conversation. No file written.
@@ -187,7 +222,7 @@ Ask the user these questions **once per session** in a single prompt. For subseq
 
 **Question 4: "Will you be stepping away during the audit?"**
 - **I'll be here (Recommended)** — Normal mode. Permission prompts may appear for writes/edits.
-- **Hands-free (walk away safe)** — Restricts to read-only tools (Read, Grep, Glob) for discovery and audit steps. No Bash, no Edit, no Write — nothing that triggers a permission prompt. Fix application is deferred until you return. Results are held in conversation output.
+- **Run the full analysis without stopping to ask — no code changes** — Restricts to read-only tools (Read, Grep, Glob) for discovery and audit steps. No Bash, no Edit, no Write — nothing that triggers a permission prompt. Fix application is deferred until you return. Results are held in conversation output.
 - **Pre-approved** — You have already configured Claude Code permissions for this session (see Permission Setup below). Run at full speed without restriction.
 
 ### Permission Modes
@@ -361,7 +396,7 @@ Do not use prose for ratings. Every finding gets a row in this table.
 
 After all findings, generate a Fix Plan grouped into these sections:
 
-**1. Safe fixes (isolated, low blast radius)**
+**1. Safe fixes (contained, only touching one or two files)**
 Changes contained within the audited files. No behavioral changes outside the workflow.
 
 | # | Finding | Files Changed | Urgency | ROI | Fix Effort |
@@ -408,9 +443,9 @@ After applying Safe fixes:
 
 #### Then
 
-- If user chose **Auto-fix safe items**: apply Section 1 fixes, run Verification,
+- If user chose **Fix small, isolated issues automatically**: apply Section 1 fixes, run Verification,
   then present Sections 2-3 for approval.
-- If user chose **Plan only**: present all sections for approval.
+- If user chose **Report issues without changing any code**: present all sections for approval.
   Do not change any code.
 
 #### Delivery
@@ -445,11 +480,11 @@ After presenting the Fix Plan, apply fixes in **waves**. Each wave is a phase fr
 
 | Wave | Fix Plan Section | Est. Time | Description |
 |------|-----------------|-----------|-------------|
-| 1 | Safe fixes + tests | ~10-15 min | Isolated, low blast radius. Auto-apply. Write tests for each fix. |
-| 2 | Cross-cutting fixes + tests | ~15-25 min | Touch shared code. Present for review first. Write tests. |
-| 3 | Design decisions | ~5-15 min | Multiple options. Requires user input per item. |
-| 4 | Pattern Sweep | ~5 min | Scan codebase for patterns found in this workflow. |
-| 5 | Build + Test + Commit | ~5 min | Build both platforms, run tests, stage, commit. |
+| 1 — Quick fixes | Safe fixes + tests | ~10-15 min | Small, contained fixes (one or two files each). Applied automatically. Tests written for each fix. |
+| 2 — Shared code fixes | Cross-cutting fixes + tests | ~15-25 min | Fixes that touch code used by other features. Presented for your review first. Tests written for each fix. |
+| 3 — Your call | Design decisions | ~5-15 min | Multiple valid approaches. You pick the direction for each item. |
+| 4 — Same bug elsewhere | Pattern Sweep | ~5 min | Search the whole codebase for the same bugs found in this workflow. |
+| 5 — Wrap up | Build + Test + Commit | ~5 min | Build both platforms, run tests, stage, commit. |
 
 **Every fix must have a test.** Do not move to the next wave until tests for the current wave's fixes are written and compiling. The test verifies the fix works; without it, the fix is unverified code.
 
@@ -475,17 +510,18 @@ After completing each wave, **always** print:
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ Wave [N] of [total] complete: [wave name]
+✅ Fix batch [N] of [total] complete: [plain description]
    [X] findings fixed, [Y] remaining, [Z] deferred
 
-⏱  Next: Wave [N+1] — [wave name] (~[time estimate])
+⏱  Next: Batch [N+1] — [plain description] (~[time estimate])
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-Then immediately ask: "Ready for Wave [N+1]?" with options:
-- **Proceed (Recommended)** — Start the next wave
+Then immediately ask: "Ready for the next batch?" with options:
+- **Proceed (Recommended)** — Start the next batch of fixes
 - **Commit first** — Commit current changes before continuing
 - **Stop here** — End for now, resume later
+- **Explain more** — Describe what the next batch will do before starting
 
 ### Between Workflows (MANDATORY transition)
 
@@ -534,7 +570,7 @@ Deliver results according to the user's output preference from Step 1.
 
 ## Cross-Skill Handoff
 
-Roundtrip Radar complements **data-model-radar** (model layer), **ui-path-radar** (navigation paths), **ui-enhancer** (visual quality), and **capstone-radar** (ship readiness). Findings from one skill inform the others.
+Roundtrip Radar complements **data-model-radar** (model layer), **ui-path-radar** (navigation paths), **ui-enhancer-radar** (visual quality), and **capstone-radar** (ship readiness). Findings from one skill inform the others.
 
 ### On Completion — Write Handoff
 
@@ -554,7 +590,7 @@ for_ui_path_radar:
       file: "<file:line>"
       question: "<does the UI reflect this data issue?>"
 
-for_ui_enhancer:
+for_ui_enhancer_radar:
   # Dead code, orphaned UI, or views with broken data backing
   suspects:
     - view: "<view file>"
@@ -575,13 +611,13 @@ cross_cutting_patterns:
     status: "fixed" | "deferred"
 ```
 
-**Fire-and-forget:** Always write this file regardless of whether other skills are installed.
+**Automatic:** This file is always written so other audit skills can pick up where this one left off. No user action needed.
 
 ### On Startup — Read Handoffs
 
 Before Step 0 (or Step 1 if skipping discovery), check for handoff files:
 - `.agents/ui-audit/ui-path-radar-handoff.yaml` — dead ends and broken promises suggest workflows to prioritize
-- `.agents/ui-audit/ui-enhancer-handoff.yaml` — visual issues in views that may have data backing problems
+- `.agents/ui-audit/ui-enhancer-radar-handoff.yaml` — visual issues in views that may have data backing problems
 
 If found, incorporate relevant items as **suspects** in the matching workflow's audit. Specifically:
 - Dead-end buttons from ui-path-radar → check the workflow behind that button
@@ -594,7 +630,7 @@ If not found, proceed normally.
 
 ## REMINDER (End-of-File — Survives Context Compaction)
 
-**CRITICAL:** After EVERY wave, EVERY commit, and EVERY workflow transition:
+**CRITICAL:** After EVERY fix batch (wave), EVERY commit, and EVERY workflow transition:
 1. Print the progress banner (wave-level or workflow-level)
 2. Immediately `AskUserQuestion` for the next step
 3. NEVER leave a blank prompt
