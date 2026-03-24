@@ -445,11 +445,13 @@ After presenting the Fix Plan, apply fixes in **waves**. Each wave is a phase fr
 
 | Wave | Fix Plan Section | Est. Time | Description |
 |------|-----------------|-----------|-------------|
-| 1 | Safe fixes | ~5-10 min | Isolated, low blast radius. Auto-apply. |
-| 2 | Cross-cutting fixes | ~10-20 min | Touch shared code. Present for review first. |
+| 1 | Safe fixes + tests | ~10-15 min | Isolated, low blast radius. Auto-apply. Write tests for each fix. |
+| 2 | Cross-cutting fixes + tests | ~15-25 min | Touch shared code. Present for review first. Write tests. |
 | 3 | Design decisions | ~5-15 min | Multiple options. Requires user input per item. |
 | 4 | Pattern Sweep | ~5 min | Scan codebase for patterns found in this workflow. |
-| 5 | Commit | ~2 min | Stage, commit, verify. |
+| 5 | Build + Test + Commit | ~5 min | Build both platforms, run tests, stage, commit. |
+
+**Every fix must have a test.** Do not move to the next wave until tests for the current wave's fixes are written and compiling. The test verifies the fix works; without it, the fix is unverified code.
 
 Skip empty waves (e.g., if no design decisions, go straight from Wave 2 to Wave 4).
 
@@ -532,7 +534,7 @@ Deliver results according to the user's output preference from Step 1.
 
 ## Cross-Skill Handoff
 
-Roundtrip Radar complements **ui-path-radar** (navigation paths), **ui-enhancer** (visual quality), and **release-ready-radar** (ship readiness). Findings from one skill inform the others.
+Roundtrip Radar complements **data-model-radar** (model layer), **ui-path-radar** (navigation paths), **ui-enhancer** (visual quality), and **capstone-radar** (ship readiness). Findings from one skill inform the others.
 
 ### On Completion — Write Handoff
 
@@ -559,7 +561,7 @@ for_ui_enhancer:
       finding: "<data issue that affects this view>"
       action: "verify data binding or remove dead UI"
 
-for_release_ready_radar:
+for_capstone_radar:
   # Critical/high findings that affect ship readiness
   blockers:
     - finding: "<description>"
