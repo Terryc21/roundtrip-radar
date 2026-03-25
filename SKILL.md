@@ -716,16 +716,34 @@ cross_cutting_patterns:
 
 **Automatic:** This file is always written so other audit skills can pick up where this one left off. No user action needed.
 
-### On Startup — Read Handoffs
+### On Startup — Read Handoffs (MANDATORY)
 
-Before Step 0 (or Step 1 if skipping discovery), check for handoff files:
-- `.agents/ui-audit/ui-path-radar-handoff.yaml` — dead ends and broken promises suggest workflows to prioritize
-- `.agents/ui-audit/ui-enhancer-radar-handoff.yaml` — visual issues in views that may have data backing problems
+Before Step 0 (or Step 1 if skipping discovery), read ALL companion handoff YAMLs that exist:
 
-If found, incorporate relevant items as **suspects** in the matching workflow's audit. Specifically:
+```
+Read .agents/ui-audit/data-model-radar-handoff.yaml (if exists)
+Read .agents/ui-audit/ui-path-radar-handoff.yaml (if exists)
+Read .agents/ui-audit/ui-enhancer-radar-handoff.yaml (if exists)
+Read .agents/ui-audit/capstone-radar-handoff.yaml (if exists)
+```
+
+**Parse `for_roundtrip_radar` sections.** Each companion can direct findings to this skill. Look for:
+- `for_roundtrip_radar.suspects[]` — workflows or data paths another skill flagged as potentially broken
+- `for_roundtrip_radar.priority_workflows[]` — workflows another skill wants audited first
+
+If found, incorporate as **priority targets** in workflow selection. These are not pre-confirmed findings — verify each one independently.
+
+**What each companion provides:**
+- data-model-radar — model gaps that may cause data loss in specific workflows
+- ui-path-radar — dead ends and broken promises suggest workflows to prioritize
+- ui-enhancer-radar — visual issues in views that may have data backing problems
+- capstone-radar — priority workflows from ship readiness grading
+
+**Specific incorporation rules:**
 - Dead-end buttons from ui-path-radar → check the workflow behind that button
 - Orphaned views from ui-path-radar → verify the data path exists
 - Views flagged by ui-enhancer → check if the data binding is correct before suggesting visual changes
+- Model gaps from data-model-radar → trace through the workflow that creates/edits that model
 
 If not found, proceed normally.
 
