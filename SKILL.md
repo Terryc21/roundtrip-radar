@@ -217,6 +217,58 @@ A solo developer's codebase reflects multiple versions of themselves — early c
 
 ---
 
+## Audit Methodology (MANDATORY — governs scanning)
+
+Three principles to minimize false negatives. These apply before domain-specific scanning begins.
+
+### Principle 1: Enumerate-Then-Verify
+
+For domains tagged `enumerate-required`: list ALL candidate files first, then verify each uses the correct pattern. Do NOT rely on grep alone to discover violations.
+
+```
+WRONG (search-and-hope):
+  1. Grep for known anti-pattern → 2. Report matches → 3. Grade
+
+RIGHT (enumerate-then-verify):
+  1. Enumerate ALL files containing the subject
+  2. Subtract verified-clean skip list
+  3. For EACH file, verify correct pattern exists
+  4. Report files where correct pattern is MISSING
+```
+
+**Why:** Grep finds what you search for but cannot find what you don't search for. A violation may have no searchable code signature (e.g., an element that inherits default styling with no explicit code). Grep-only scanning missed 57% of violations in real-world testing.
+
+**When to use:** Apply to domains where violations can be the absence of a correct pattern, not just the presence of a wrong one. Domains where every violation has a unique searchable signature (force unwraps, hardcoded strings) remain `grep-sufficient`.
+
+### Principle 2: File-Scoped Skip Lists
+
+A resolved finding applies to THAT FILE ONLY. Files that call, import, or depend on a resolved file need independent verification. Do not propagate "clean" status across a call graph.
+
+**Why:** Marking a helper file as "fixed" caused an audit to skip 8 view files that used the helper. The helper was fixed. The views calling it weren't.
+
+### Principle 3: Negative Pattern Matching
+
+To find "X without Y," search for X first, then verify Y exists around it. If neither correct pattern nor anti-pattern is found, that is a negative match.
+
+**Negative match ranking (3 tiers):**
+
+| Tier | Name | Criteria | Presentation |
+|------|------|----------|-------------|
+| A | Almost certain | Same file has verified violations OR sibling files use correct pattern | Present with verified findings |
+| B | Probable | View/file type strongly implies the pattern applies | "Likely needs fixing" section |
+| C | Possible | Subject exists without correct pattern, but context is ambiguous | "Review these" section |
+
+**Ranking factors (in priority order):**
+1. Proximity to verified violations in the same file (highest signal)
+2. Sibling file consistency (do similar files use the correct pattern?)
+3. View type / context (settings rows vs system picker options vs status badges)
+4. Element size / prominence (large prominent elements vs small subtle indicators)
+5. Code recency via git blame (recent edits more likely missed the pattern)
+
+**For projects without a style guide:** Infer conventions from codebase majority patterns. Tag findings as `inferred-convention` (Tier B max). After the audit, offer to generate a starter CLAUDE.md from inferred conventions.
+
+---
+
 ## Step 0: Workflow Discovery
 
 Run first if workflows are unknown or have changed.
@@ -296,8 +348,10 @@ Ask the user these questions **once per session** in a single prompt. For subseq
 - **Senior/Expert** — Deep expertise. Terse, file:line only, skip explanations.
 
 **Question 2: "How should fixes be handled?"**
-- **Fix small, isolated issues automatically (Recommended)** — Apply fixes that are contained (only touching one or two files) without asking. Present larger fixes and design decisions as a plan for approval.
-- **Report issues without changing any code** — Do not change any code. Present all findings as a plan for approval.
+- **Auto-fix safe items (Recommended)** — Apply isolated, low-blast-radius fixes automatically. Present cross-cutting fixes and design decisions for approval first.
+- **Review first** — Present all findings with ratings, then ask before making any changes. Fixes still happen — you just approve each wave first.
+
+**IMPORTANT:** Both modes lead to fixes. "Review first" means the user sees the plan before code changes — it does NOT mean "skip fixes and jump to handoff." After presenting findings, ALWAYS offer to fix them regardless of which mode was selected.
 
 **Question 3: "How should results be delivered?"**
 - **Display only (Recommended)** — Show findings in the conversation. No file written.
@@ -546,10 +600,10 @@ After applying Safe fixes:
 
 #### Then
 
-- If user chose **Fix small, isolated issues automatically**: apply Section 1 fixes, run Verification,
+- If user chose **Auto-fix safe items**: apply Section 1 fixes, run Verification,
   then present Sections 2-3 for approval.
-- If user chose **Report issues without changing any code**: present all sections for approval.
-  Do not change any code.
+- If user chose **Review first**: present all sections for approval,
+  then ask if the user wants to proceed with fixes.
 
 #### Delivery
 
