@@ -238,7 +238,7 @@ RIGHT (enumerate-then-verify):
 
 **Why:** Grep finds what you search for but cannot find what you don't search for. A violation may have no searchable code signature (e.g., an element that inherits default styling with no explicit code). Grep-only scanning missed 57% of violations in real-world testing.
 
-**When to use:** Apply to domains where violations can be the absence of a correct pattern, not just the presence of a wrong one. Domains where every violation has a unique searchable signature (force unwraps, hardcoded strings) remain `grep-sufficient`.
+**When to use:** Apply to domains where violations can be the absence of a correct pattern, not just the presence of a wrong one. Domains where every violation has a unique searchable signature (force unwraps, hardcoded strings) remain `grep-sufficient`. Scan-method tags (`grep-sufficient`, `enumerate-required`, `mixed`) are on each check category below.
 
 ### Principle 2: File-Scoped Skip Lists
 
@@ -481,14 +481,14 @@ Example:
 
 ### What to Check
 
-1. **Data safety** — destructive operations, transaction boundaries, edge cases
-2. **Error handling** — missing catches, silent failures, user-facing error messages
-3. **Concurrency** — `@MainActor` compliance, Task isolation, ModelContext thread safety
-4. **Performance** — `@Query` without predicates, O(n²) loops, main-thread blocking
-5. **Contract mismatches** — constants vs hardcoded strings, keys defined in one file but consumed in another
-6. **Round-trip completeness** — does data survive a full create → export → import/restore cycle?
-7. **Interruption paths** — dismiss mid-operation, app backgrounding, rotation, cancel
-8. **Tests** — update broken tests, add tests for P0-P1 fixes where logic is testable
+1. **Data safety** `enumerate-required` — destructive operations, transaction boundaries, edge cases
+2. **Error handling** `mixed` — missing catches, silent failures, user-facing error messages
+3. **Concurrency** `mixed` — `@MainActor` compliance, Task isolation, ModelContext thread safety
+4. **Performance** `grep-sufficient` — `@Query` without predicates, O(n²) loops, main-thread blocking
+5. **Contract mismatches** `grep-sufficient` — constants vs hardcoded strings, keys defined in one file but consumed in another
+6. **Round-trip completeness** `enumerate-required` — does data survive a full create → export → import/restore cycle?
+7. **Interruption paths** `enumerate-required` — dismiss mid-operation, app backgrounding, rotation, cancel
+8. **Tests** `enumerate-required` — update broken tests, add tests for P0-P1 fixes where logic is testable
 
 ### Verification Template (MANDATORY per workflow)
 
