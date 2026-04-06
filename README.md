@@ -1,5 +1,7 @@
 # Roundtrip Radar
 
+![Visitors](https://komarev.com/ghpvc/?username=Terryc21&repo=roundtrip-radar&label=visitors&color=blue) ![GitHub stars](https://img.shields.io/github/stars/Terryc21/roundtrip-radar?style=flat) ![GitHub forks](https://img.shields.io/github/forks/Terryc21/roundtrip-radar?style=flat)
+
 > Per-workflow code audit tracing data through complete user flows for bugs, data safety, performance, and round-trip completeness.
 
 ## Moved to Radar Suite
